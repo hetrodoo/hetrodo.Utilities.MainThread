@@ -8,7 +8,19 @@ namespace hetrodo.Utilities
 {
     public class MainThread
     {
+        #region Other
         public delegate void OnExceptionCaughtEvent(Exception ex);
+
+        public class RedundancyException : Exception
+        {
+            public RedundancyException()
+            {
+            }
+            public RedundancyException(string message) : base(message)
+            {
+            }
+        }
+        #endregion
 
         #region Public
         public static bool IsRunning { get { return Instance != null; } }
@@ -21,6 +33,7 @@ namespace hetrodo.Utilities
 
             Instance = this;
             ActionQueue = new List<Action>();
+            UnityMainThread = Thread.CurrentThread;
             waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
 
             HandleRequests();
@@ -31,6 +44,9 @@ namespace hetrodo.Utilities
             if (Instance == null)
                 throw new NullReferenceException("MainThread was not initialized.");
 
+            if (Instance.UnityMainThread == Thread.CurrentThread)
+                throw new RedundancyException("You are calling the main thread from itself.");
+
             Instance.ActionQueue.Add(a);
             Instance.waitHandle.WaitOne();
         }
@@ -39,6 +55,7 @@ namespace hetrodo.Utilities
         #region Private
         private readonly EventWaitHandle waitHandle;
         private readonly List<Action> ActionQueue;
+        private readonly Thread UnityMainThread;
         private static MainThread Instance;
 
         private async void HandleRequests()
