@@ -1,5 +1,4 @@
 ﻿using System;
-using UnityEngine;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,8 +8,11 @@ namespace hetrodo.Utilities
 {
     public class MainThread
     {
+        public delegate void OnExceptionCaughtEvent(Exception ex);
+
         #region Public
         public static bool IsRunning { get { return Instance != null; } }
+        public static OnExceptionCaughtEvent OnExceptionCaught;
 
         public MainThread()
         {
@@ -27,13 +29,10 @@ namespace hetrodo.Utilities
         public static void Exec(Action a)
         {
             if (Instance == null)
-            {
-                Debug.LogError("Initialization required.");
-                return;
-            }
+                throw new NullReferenceException("MainThread was not initialized.");
 
             Instance.ActionQueue.Add(a);
-            Instance.waitHandle.WaitOne(1000);
+            Instance.waitHandle.WaitOne();
         }
         #endregion
 
@@ -51,24 +50,27 @@ namespace hetrodo.Utilities
                 {
                     if (ActionQueue.Count > 0)
                     {
-                        for (int i = 0; i < ActionQueue.Count; i++)
-                        {
-                            //Avoid outside error messing up with the MainThread handler.
-                            try { ActionQueue[i].Invoke(); } catch (Exception ex) { Debug.LogError(ex); }
-                            waitHandle.Set();
-                        }
+                        var count = ActionQueue.Count;
 
+                        //Execute calls
+                        for (int i = 0; i < count; i++)
+                            try { ActionQueue[i].Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
+
+                        //Clear pool before releasing threads
                         ActionQueue.Clear();
+
+                        //Release threads
+                        for (int i = 0; i < count; i++)
+                            waitHandle.Set();
                     }
 
-                    await Task.Delay(Mathf.Clamp(25, 1, 1000));
+                    await Task.Delay(25);
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError(ex);
+                OnExceptionCaught?.Invoke(ex);
 
-                Debug.Log("[MainThread Fail Safe]: Restarting in 1 second.");
                 await Task.Delay(1000);
                 HandleRequests();
             }
