@@ -39,16 +39,35 @@ namespace hetrodo.Utilities
             HandleRequests();
         }
 
-        public static void Exec(Action a)
+        public static void Exec(Action action)
         {
+            if (action == null)
+                throw new ArgumentNullException("action");
+
             if (Instance == null)
                 throw new NullReferenceException("MainThread was not initialized.");
 
             if (Instance.UnityMainThread == Thread.CurrentThread)
                 throw new RedundancyException("You are calling the main thread from itself.");
 
-            Instance.ActionQueue.Add(a);
+            action += () => { Instance.waitHandle.Set(); };
+
+            Instance.ActionQueue.Add(action);
             Instance.waitHandle.WaitOne();
+        }
+
+        public static void ExecAsync(Action action)
+        {
+            if (action == null)
+                throw new ArgumentNullException("action");
+
+            if (Instance == null)
+                throw new NullReferenceException("MainThread was not initialized.");
+
+            if (Instance.UnityMainThread == Thread.CurrentThread)
+                throw new RedundancyException("You are calling the main thread from itself.");
+
+            Instance.ActionQueue.Add(action);
         }
         #endregion
 
@@ -67,18 +86,12 @@ namespace hetrodo.Utilities
                 {
                     if (ActionQueue.Count > 0)
                     {
-                        var count = ActionQueue.Count;
-
                         //Execute calls
-                        for (int i = 0; i < count; i++)
-                            try { ActionQueue[i].Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
-
-                        //Clear pool before releasing threads
-                        ActionQueue.Clear();
-
-                        //Release threads
-                        for (int i = 0; i < count; i++)
-                            waitHandle.Set();
+                        ActionQueue.ForEach((Action action) =>
+                        {
+                            try { action.Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
+                            ActionQueue.Remove(action);
+                        });
                     }
 
                     await Task.Delay(25);
@@ -87,8 +100,6 @@ namespace hetrodo.Utilities
             catch (Exception ex)
             {
                 OnExceptionCaught?.Invoke(ex);
-
-                await Task.Delay(1000);
                 HandleRequests();
             }
         }
