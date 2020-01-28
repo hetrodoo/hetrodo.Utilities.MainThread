@@ -34,7 +34,8 @@ namespace hetrodo.Utilities
             Instance = this;
             ActionQueue = new List<Action>();
             UnityMainThread = Thread.CurrentThread;
-            waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
+            syncWaitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
+            mainWaitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
 
             HandleRequests();
         }
@@ -50,10 +51,12 @@ namespace hetrodo.Utilities
             if (Instance.UnityMainThread == Thread.CurrentThread)
                 throw new RedundancyException("You are calling the main thread from itself.");
 
-            action += () => { Instance.waitHandle.Set(); };
+            action += () => { Instance.syncWaitHandle.Set(); };
 
             Instance.ActionQueue.Add(action);
-            Instance.waitHandle.WaitOne();
+
+            Instance.mainWaitHandle.Set();
+            Instance.syncWaitHandle.WaitOne();
         }
 
         public static void ExecAsync(Action action)
@@ -68,11 +71,13 @@ namespace hetrodo.Utilities
                 throw new RedundancyException("You are calling the main thread from itself.");
 
             Instance.ActionQueue.Add(action);
+            Instance.mainWaitHandle.Set();
         }
         #endregion
 
         #region Private
-        private readonly EventWaitHandle waitHandle;
+        private readonly EventWaitHandle syncWaitHandle;
+        private readonly EventWaitHandle mainWaitHandle;
         private readonly List<Action> ActionQueue;
         private readonly Thread UnityMainThread;
         private static MainThread Instance;
@@ -94,7 +99,7 @@ namespace hetrodo.Utilities
                         });
                     }
 
-                    await Task.Delay(25);
+                    await WaitForHandle(mainWaitHandle, 25);
                 }
             }
             catch (Exception ex)
@@ -102,6 +107,14 @@ namespace hetrodo.Utilities
                 OnExceptionCaught?.Invoke(ex);
                 HandleRequests();
             }
+        }
+
+        private static Task WaitForHandle(EventWaitHandle waitHandle, int timeout = 25)
+        {
+            var waitTask = new Task(() => waitHandle.WaitOne(timeout));
+            waitTask.Start();
+
+            return waitTask;
         }
         #endregion
 
