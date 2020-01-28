@@ -91,12 +91,13 @@ namespace hetrodo.Utilities
                 {
                     if (ActionQueue.Count > 0)
                     {
+                        var Actions = new Action[ActionQueue.Count];
+                        ActionQueue.CopyTo(Actions);
+                        ActionQueue.Clear();
+
                         //Execute calls
-                        ActionQueue.ForEach((Action action) =>
-                        {
+                        foreach (Action action in Actions)
                             try { action.Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
-                            ActionQueue.Remove(action);
-                        });
                     }
 
                     await WaitForHandle(mainWaitHandle, 25);
