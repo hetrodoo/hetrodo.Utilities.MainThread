@@ -54,9 +54,7 @@ namespace hetrodo.Utilities
             action += () => { Instance.syncWaitHandle.Set(); };
 
             Instance.ActionQueue.Add(action);
-
-            Instance.mainWaitHandle.Set();
-            Instance.syncWaitHandle.WaitOne();
+            WaitHandle.SignalAndWait(Instance.mainWaitHandle, Instance.syncWaitHandle);
         }
 
         public static void ExecAsync(Action action)
@@ -89,6 +87,8 @@ namespace hetrodo.Utilities
             {
                 while (true)
                 {
+                    await WaitForHandle(mainWaitHandle, 25);
+
                     if (ActionQueue.Count > 0)
                     {
                         var Actions = new Action[ActionQueue.Count];
@@ -99,8 +99,6 @@ namespace hetrodo.Utilities
                         foreach (Action action in Actions)
                             try { action.Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
                     }
-
-                    await WaitForHandle(mainWaitHandle, 25);
                 }
             }
             catch (Exception ex)
