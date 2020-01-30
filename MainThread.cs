@@ -89,15 +89,10 @@ namespace hetrodo.Utilities
                 {
                     await WaitForHandle(mainWaitHandle, 25);
 
-                    if (ActionQueue.Count > 0)
+                    while (ActionQueue.Count != 0)
                     {
-                        var Actions = new Action[ActionQueue.Count];
-                        ActionQueue.CopyTo(Actions);
-                        ActionQueue.Clear();
-
-                        //Execute calls
-                        foreach (Action action in Actions)
-                            try { action.Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
+                        try { ActionQueue[0]?.Invoke(); } catch (Exception ex) { OnExceptionCaught?.Invoke(ex); }
+                        ActionQueue.RemoveAt(0);
                     }
                 }
             }
