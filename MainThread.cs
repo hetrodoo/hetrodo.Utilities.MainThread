@@ -111,55 +111,5 @@ namespace hetrodo.Utilities
             return waitTask;
         }
         #endregion
-
-        #region Timing
-        public static class Timing
-        {
-            private static readonly Dictionary<Thread, DateTime> threads = new Dictionary<Thread, DateTime>();
-
-            private static readonly EventWaitHandle analyzerWaitHandle = new EventWaitHandle(true, EventResetMode.ManualReset);
-            private static readonly Thread analyzer = new Thread(() =>
-            {
-                while (true)
-                {
-                    threads.Keys.ToList().ForEach(thread =>
-                    {
-                        if (!thread.IsAlive)
-                            threads.Remove(thread);
-                    });
-
-                    analyzerWaitHandle.WaitOne(1000);
-                    analyzerWaitHandle.Reset();
-                }
-            });
-
-            public static float DeltaTime
-            {
-                get
-                {
-                    var thread = Thread.CurrentThread;
-                    analyzerWaitHandle.Set();
-
-                    if (threads.ContainsKey(thread))
-                    {
-                        var t = (float)(DateTime.Now - threads[thread]).TotalSeconds;
-                        threads[thread] = DateTime.Now;
-
-                        return t;
-                    }
-                    else
-                    {
-                        threads.Add(thread, DateTime.Now);
-
-                        if (!analyzer.IsAlive)
-                            analyzer.Start();
-
-                    }
-
-                    return 0;
-                }
-            }
-        }
-        #endregion
     }
 }
