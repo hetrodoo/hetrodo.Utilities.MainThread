@@ -16,10 +16,12 @@ using [Unity's api]("https://docs.unity3d.com/ScriptReference/") (like transform
     Executes an action on the main thread, and freezes its caller thread until execution.
  
 
+
 *   ```cs
         ExecAsync(System.Action action) //Method Asynchronous
     ``` 
     Executes an action on the main thread without freezing.
+
 
 
 *   ```cs
@@ -28,10 +30,12 @@ using [Unity's api]("https://docs.unity3d.com/ScriptReference/") (like transform
     Tells if you had already initialized the MainThread class.
 
 
+
 *   ```cs
         OnExceptionCaught(Exception ex) //Error Event
     ``` 
     If any exception occurs while executing the actions, this event will be fired.
+
 
 
 ### MainThread.Timing
@@ -41,6 +45,7 @@ using [Unity's api]("https://docs.unity3d.com/ScriptReference/") (like transform
         DeltaTime //Float Field
     ``` 
     Time since last call for each thread.
+
 
 
 
